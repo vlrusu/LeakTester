@@ -286,6 +286,7 @@ int main(){
 
     /* Set Output Data Rate */
   md.odr = ILPS22QS_4Hz;
+  
   md.avg = ILPS22QS_16_AVG;
   md.lpf = ILPS22QS_LPF_ODR_DIV_4;
   md.fs = ILPS22QS_1260hPa;
