@@ -75,10 +75,14 @@ static void platform_init(void);
   * @{
   *
   */
-const uint8_t sclkPin = 27;                                                // SPI clock
-const uint8_t csPin = 15;                                       // SPI Chip select 
-const uint8_t sdioPin = 12;                                       // SPI SDIO pin
-
+const uint8_t nSensors = 2;
+const uint8_t sclkPin = 2;                                                // SPI clock
+const uint8_t csPin = 5;                                       // SPI Chip select
+const uint32_t dataPinMask = 0b1010000;
+//const uint8_t dataPins[2] = {4,6} 
+const uint8_t sdio0Pin = 4;                                       // SPI SDIO pin
+const uint8_t sdio1Pin = 6;                                       // SPI SDIO pin
+const uint8_t spidelay = 1;
 /**
   * @}
   *
@@ -100,7 +104,8 @@ static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp,
                               uint16_t len)
 {
 
-  gpio_set_dir(sdioPin, GPIO_OUT);
+  gpio_set_dir_out_masked        (       dataPinMask);
+
  // Drop CS, ALL chips
   gpio_put(sclkPin, 1);
   gpio_put(csPin, 0);
@@ -108,16 +113,31 @@ static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp,
   //bitbang register to SDIO 
   for (uint8_t m = (uint8_t)0x80 ; m != 0; m >>= 1){
     gpio_put(sclkPin,0);
-    gpio_put(sdioPin, reg & m);
-    gpio_put(sclkPin,1);    
+    if (reg & m )
+      gpio_set_mask(dataPinMask);
+    else
+      gpio_clr_mask(dataPinMask);
+    /* gpio_put(sdio0Pin, reg & m); */
+    /* gpio_put(sdio1Pin, reg & m);     */
+    sleep_us(spidelay);
+    gpio_put(sclkPin,1);
+    sleep_us(spidelay);    
   }
 
   //bitbang rest to SDIO
   for (uint8_t i = 0; i < len; i++){
     for (uint8_t m = (uint8_t)0x80 ; m != 0; m >>= 1){
       gpio_put(sclkPin,0);
-      gpio_put(sdioPin, bufp[i] & m);
+      if (bufp[i] & m )
+	gpio_set_mask(dataPinMask);
+      else
+	gpio_clr_mask(dataPinMask);
+      
+      /* gpio_put(sdio0Pin, bufp[i] & m); */
+      /* gpio_put(sdio1Pin, bufp[i] & m); */
+      sleep_us(spidelay);
       gpio_put(sclkPin,1);
+      sleep_us(spidelay);
     }
   }
 
@@ -144,23 +164,45 @@ static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
  // Drop CS, ALL chips
   gpio_put(sclkPin, 1);
   gpio_put(csPin, 0);
-
+  sleep_us(1);
+  
+  //this is a read so set the R bit
+  reg |= 0x80;
+  //  printf("Bit banging %x",reg);
   //bitbang register to SDIO
-  gpio_set_dir(sdioPin, GPIO_OUT);  
+  gpio_set_dir_out_masked        (       dataPinMask);  
+  /* gpio_set_dir(sdio0Pin, GPIO_OUT); */
+  /* gpio_set_dir(sdio1Pin, GPIO_OUT);     */
   for (uint8_t m = (uint8_t)0x80 ; m != 0; m >>= 1){
     gpio_put(sclkPin,0);
-    gpio_put(sdioPin, reg & m);
-    gpio_put(sclkPin,1);    
+    if (reg & m )
+      gpio_set_mask(dataPinMask);
+    else
+      gpio_clr_mask(dataPinMask);
+    
+    /* gpio_put(sdio0Pin, reg & m); */
+    /* gpio_put(sdio1Pin, reg & m);     */
+    sleep_us(spidelay);    
+    gpio_put(sclkPin,1);
+    sleep_us(spidelay);    
   }
 
   //bitbang rest to SDIO
-  gpio_set_dir(sdioPin, GPIO_IN);
+  /* gpio_set_dir(sdio0Pin, GPIO_IN); */
+  /* gpio_set_dir(sdio1Pin, GPIO_IN);   */
+
+  gpio_set_dir_out_masked        (       dataPinMask);  
+
+  //  sleep_us(10);
   for (uint8_t i = 0; i < len; i++){
     bufp[i] = 0 ;
     for (uint8_t j = 8; j--;){
       gpio_put(sclkPin,0);
-      bufp[i] |= gpio_get(sdioPin);
+      sleep_us(spidelay);            
+      //      bufp[i] |= (gpio_get(sdio1Pin)<<j);
+      bufp[i] |= (gpio_get(6)<<j);      
       gpio_put(sclkPin,1);
+      sleep_us(spidelay);      
     }
   }
 
@@ -201,19 +243,30 @@ static void platform_init(void)
 
  // CS line
   gpio_init(csPin);
+  gpio_set_slew_rate(csPin, GPIO_SLEW_RATE_SLOW);
+  gpio_set_drive_strength(csPin, GPIO_DRIVE_STRENGTH_8MA);
+  
   gpio_set_dir(csPin, GPIO_OUT);
   gpio_put(csPin, 1);
 
   // Clock line direct port access
   gpio_init(sclkPin);
+  gpio_set_slew_rate(sclkPin, GPIO_SLEW_RATE_SLOW);
+  gpio_set_drive_strength(sclkPin, GPIO_DRIVE_STRENGTH_8MA);
   gpio_set_dir(sclkPin, GPIO_OUT);
   gpio_put(sclkPin, 0);
 
 
+  gpio_init_mask(dataPinMask);
+  gpio_set_dir_out_masked        (       dataPinMask);
+  
   // SDIO line direct port access
-  gpio_init(sdioPin);
-  gpio_set_dir(sdioPin, GPIO_OUT);
-  gpio_put(sdioPin, 0);
+  /* gpio_init(sdio0Pin); */
+  /* gpio_set_dir(sdio0Pin, GPIO_OUT); */
+  /* gpio_put(sdio0Pin, 0); */
+  /* gpio_init(sdio1Pin); */
+  /* gpio_set_dir(sdio1Pin, GPIO_OUT); */
+  /* gpio_put(sdio1Pin, 0); */
 
   
 }
@@ -238,22 +291,40 @@ void ilp22qs_init(stmdev_ctx_t* dev_ctx){
   dev_ctx->handle = 0;
 
   /* Initialize platform specific hardware */
-  platform_init();
+  //  platform_init();
 
   /* Wait sensor boot time */
   platform_delay(BOOT_TIME);
 
+
+  bus_mode.interface = ILPS22QS_SPI_3W ;
+  ilps22qs_bus_mode_set(dev_ctx, &bus_mode);
+  //  printf("Interface = %x\n",bus_mode.interface);
+
+  
   /* Check device ID */
-  ilps22qs_id_get(dev_ctx, &id);
-  printf("Device ID=%d\n",id.whoami);
+
+  while(1){
+    ilps22qs_id_get(dev_ctx, &id);
+    printf("Device ID=%x\n",id.whoami);
+    sleep_ms(1000);
+  }
+  ilps22qs_id_get(dev_ctx, &id);   
   if (id.whoami != ILPS22QS_ID)
     while(1);
 
+
+  
   /* Restore default configuration */
   ilps22qs_init_set(dev_ctx, ILPS22QS_RESET);
   do {
     ilps22qs_status_get(dev_ctx, &status);
   } while (status.sw_reset);
+
+
+
+  
+  ilps22qs_bus_mode_set(dev_ctx, &bus_mode);
 
   /* Disable AH/QVAR to save power consumption */
   ilps22qs_ah_qvar_disable(dev_ctx);
@@ -263,7 +334,7 @@ void ilp22qs_init(stmdev_ctx_t* dev_ctx){
 
   /* Select bus interface */
   bus_mode.filter = ILPS22QS_AUTO;
-  bus_mode.interface = ILPS22QS_SEL_BY_HW;
+  bus_mode.interface = ILPS22QS_SPI_3W ;
   ilps22qs_bus_mode_set(dev_ctx, &bus_mode);
 
 
@@ -275,6 +346,14 @@ void ilp22qs_init(stmdev_ctx_t* dev_ctx){
 
 
 int main(){
+
+
+
+  platform_init();
+  stdio_init_all();
+  sleep_ms(1000);
+  
+
 
   ilps22qs_all_sources_t all_sources;
   stmdev_ctx_t dev_ctx;
@@ -296,8 +375,12 @@ int main(){
   while(1)
   {
 
+    
     /* Read output only if new values are available */
     ilps22qs_all_sources_get(&dev_ctx, &all_sources);
+
+    sleep_ms(2000);
+
     if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
       ilps22qs_data_get(&dev_ctx, &md, &data);
 
@@ -306,7 +389,9 @@ int main(){
               data.pressure.hpa, data.heat.deg_c);
 
     }
-
   }
 
+
+
+  
 }
