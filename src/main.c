@@ -62,7 +62,7 @@ static ilps22qs_data_t data;
 static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp,
                               uint16_t len);
 static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
-                             uint16_t len);
+                             uint16_t len, uint8_t w);
 static void platform_delay(uint32_t ms);
 static void platform_init(void);
 
@@ -79,7 +79,7 @@ const uint8_t nSensors = 2;
 const uint8_t sclkPin = 2;                                                // SPI clock
 const uint8_t csPin = 5;                                       // SPI Chip select
 const uint32_t dataPinMask = 0b1010000;
-//const uint8_t dataPins[2] = {4,6} 
+const uint8_t dataPin[2] = {4,6} ;
 const uint8_t sdio0Pin = 4;                                       // SPI SDIO pin
 const uint8_t sdio1Pin = 6;                                       // SPI SDIO pin
 const uint8_t spidelay = 1;
@@ -158,7 +158,7 @@ static int32_t platform_write(void *handle, uint8_t reg, const uint8_t *bufp,
  *
  */
 static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
-                             uint16_t len)
+                             uint16_t len, uint8_t w)
 {
 
  // Drop CS, ALL chips
@@ -191,7 +191,7 @@ static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
   /* gpio_set_dir(sdio0Pin, GPIO_IN); */
   /* gpio_set_dir(sdio1Pin, GPIO_IN);   */
 
-  gpio_set_dir_out_masked        (       dataPinMask);  
+  gpio_set_dir_in_masked        (       dataPinMask);  
 
   //  sleep_us(10);
   for (uint8_t i = 0; i < len; i++){
@@ -200,7 +200,7 @@ static int32_t platform_read(void *handle, uint8_t reg, uint8_t *bufp,
       gpio_put(sclkPin,0);
       sleep_us(spidelay);            
       //      bufp[i] |= (gpio_get(sdio1Pin)<<j);
-      bufp[i] |= (gpio_get(6)<<j);      
+      bufp[i] |= (gpio_get(w)<<j);      
       gpio_put(sclkPin,1);
       sleep_us(spidelay);      
     }
@@ -296,32 +296,40 @@ void ilp22qs_init(stmdev_ctx_t* dev_ctx){
   /* Wait sensor boot time */
   platform_delay(BOOT_TIME);
 
+  //  ilps22qs_reset(dev_ctx);
+  //  sleep_us(10);
 
-  bus_mode.interface = ILPS22QS_SPI_3W ;
-  ilps22qs_bus_mode_set(dev_ctx, &bus_mode);
-  //  printf("Interface = %x\n",bus_mode.interface);
+
+  //  while(1){
+    bus_mode.interface = ILPS22QS_SPI_3W ;
+    ilps22qs_bus_mode_set(dev_ctx, &bus_mode);
+    //        sleep_ms(1000);
+    //  }
+    //  printf("Interface = %x\n",bus_mode.interface);
 
   
   /* Check device ID */
 
-  while(1){
-    ilps22qs_id_get(dev_ctx, &id);
+    //  while(1){
+    ilps22qs_id_get(dev_ctx, &id,dataPin[1]);
     printf("Device ID=%x\n",id.whoami);
     sleep_ms(1000);
-  }
-  ilps22qs_id_get(dev_ctx, &id);   
+    //  }
+  ilps22qs_id_get(dev_ctx, &id, dataPin[0]);   
   if (id.whoami != ILPS22QS_ID)
     while(1);
 
 
   
   /* Restore default configuration */
-  ilps22qs_init_set(dev_ctx, ILPS22QS_RESET);
-  do {
-    ilps22qs_status_get(dev_ctx, &status);
-  } while (status.sw_reset);
+  /* ilps22qs_init_set(dev_ctx, ILPS22QS_RESET); */
+  /* do { */
+  /*   ilps22qs_status_get(dev_ctx, &status); */
+  /* } while (status.sw_reset); */
 
 
+
+  ilps22qs_reset(dev_ctx);
 
   
   ilps22qs_bus_mode_set(dev_ctx, &bus_mode);
@@ -330,7 +338,7 @@ void ilp22qs_init(stmdev_ctx_t* dev_ctx){
   ilps22qs_ah_qvar_disable(dev_ctx);
 
   /* Set bdu and if_inc recommended for driver usage */
-  ilps22qs_init_set(dev_ctx, ILPS22QS_DRV_RDY);
+  //  ilps22qs_init_set(dev_ctx, ILPS22QS_DRV_RDY);
 
   /* Select bus interface */
   bus_mode.filter = ILPS22QS_AUTO;
@@ -377,18 +385,44 @@ int main(){
 
     
     /* Read output only if new values are available */
-    ilps22qs_all_sources_get(&dev_ctx, &all_sources);
+    while ( (all_sources.drdy_pres | all_sources.drdy_temp) == 0){
+      ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[0]);
 
-    sleep_ms(2000);
+      sleep_ms(1000);
+    }
 
-    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
-      ilps22qs_data_get(&dev_ctx, &md, &data);
+    //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
+      ilps22qs_data_get(&dev_ctx, &md, &data,dataPin[0]);
 
       printf(
-              "pressure [hPa]:%6.2f temperature [degC]:%6.2f\r\n",
+              "1 . pressure [hPa]:%6.2f temperature [degC]:%6.2f\r\n",
               data.pressure.hpa, data.heat.deg_c);
 
+      //    }
+      sleep_ms(1000);
+
+    /* Read output only if new values are available */
+    while ( (all_sources.drdy_pres | all_sources.drdy_temp) == 0){
+      ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[1]);
+
+      sleep_ms(1000);
     }
+      
+    //    ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[1]);
+
+    //    sleep_ms(1000);
+
+    //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
+      ilps22qs_data_get(&dev_ctx, &md, &data,dataPin[1]);
+
+      printf(
+              "2 . pressure [hPa]:%6.2f temperature [degC]:%6.2f\r\n",
+              data.pressure.hpa, data.heat.deg_c);
+
+      //    }
+
+      sleep_ms(1000);
+
   }
 
 
