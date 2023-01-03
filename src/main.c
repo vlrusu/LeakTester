@@ -78,8 +78,9 @@ static void platform_init(void);
 const uint8_t nSensors = 2;
 const uint8_t sclkPin = 2;                                                // SPI clock
 const uint8_t csPin = 5;                                       // SPI Chip select
-const uint32_t dataPinMask = 0b1010000;
-const uint8_t dataPin[2] = {4,6} ;
+//4,6,7,8,9,10
+const uint32_t dataPinMask = 0b11000000;
+//const uint8_t dataPin[3] = {4,7,6} ;
 const uint8_t sdio0Pin = 4;                                       // SPI SDIO pin
 const uint8_t sdio1Pin = 6;                                       // SPI SDIO pin
 const uint8_t spidelay = 1;
@@ -244,7 +245,7 @@ static void platform_init(void)
  // CS line
   gpio_init(csPin);
   gpio_set_slew_rate(csPin, GPIO_SLEW_RATE_SLOW);
-  gpio_set_drive_strength(csPin, GPIO_DRIVE_STRENGTH_8MA);
+  gpio_set_drive_strength(csPin, GPIO_DRIVE_STRENGTH_12MA);
   
   gpio_set_dir(csPin, GPIO_OUT);
   gpio_put(csPin, 1);
@@ -252,7 +253,7 @@ static void platform_init(void)
   // Clock line direct port access
   gpio_init(sclkPin);
   gpio_set_slew_rate(sclkPin, GPIO_SLEW_RATE_SLOW);
-  gpio_set_drive_strength(sclkPin, GPIO_DRIVE_STRENGTH_8MA);
+  gpio_set_drive_strength(sclkPin, GPIO_DRIVE_STRENGTH_12MA);
   gpio_set_dir(sclkPin, GPIO_OUT);
   gpio_put(sclkPin, 0);
 
@@ -310,14 +311,18 @@ void ilp22qs_init(stmdev_ctx_t* dev_ctx){
   
   /* Check device ID */
 
-    //  while(1){
-    ilps22qs_id_get(dev_ctx, &id,dataPin[1]);
-    printf("Device ID=%x\n",id.whoami);
-    sleep_ms(1000);
-    //  }
-  ilps22qs_id_get(dev_ctx, &id, dataPin[0]);   
-  if (id.whoami != ILPS22QS_ID)
-    while(1);
+    /* while(1){ */
+    /* ilps22qs_id_get(dev_ctx, &id,dataPin[0]); */
+    /* printf("Device 0 ID=%x\n",id.whoami); */
+    /* ilps22qs_id_get(dev_ctx, &id,dataPin[1]); */
+    /* printf("Device 1 ID=%x\n",id.whoami); */
+    /* ilps22qs_id_get(dev_ctx, &id,dataPin[2]); */
+    /* printf("Device 2 ID=%x\n",id.whoami); */
+    /* sleep_ms(1000); */
+    /* } */
+  /* ilps22qs_id_get(dev_ctx, &id, dataPin[1]);    */
+  /* if (id.whoami != ILPS22QS_ID) */
+  /*   while(1); */
 
 
   
@@ -379,52 +384,65 @@ int main(){
   md.fs = ILPS22QS_1260hPa;
   ilps22qs_mode_set(&dev_ctx, &md);
 
+  uint8_t bit_pos = 0;
+  uint8_t bitcount = 0;
+  uint8_t dataPin[32];
+  uint32_t mask = dataPinMask;
+  while(mask) {
+    if((mask&1)==1) {
+      dataPin[bitcount] = bit_pos;
+      bitcount++;
+    }
+    bit_pos++;
+    mask>>=1; 
+  }
+
   /* Read samples in polling mode (no int) */
   while(1)
   {
 
-    
-    /* Read output only if new values are available */
-    while ( (all_sources.drdy_pres | all_sources.drdy_temp) == 0){
-      ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[0]);
+    for (uint8_t idev = 0 ;idev < bitcount; idev++){
+      /* Read output only if new values are available */
+      while ( (all_sources.drdy_pres | all_sources.drdy_temp) == 0){
+	ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[idev]);
 
-      sleep_ms(1000);
-    }
+	sleep_ms(1000);
+      }
 
-    //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
-      ilps22qs_data_get(&dev_ctx, &md, &data,dataPin[0]);
+      //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
+      ilps22qs_data_get(&dev_ctx, &md, &data,dataPin[idev]);
 
       printf(
-              "1 . pressure [hPa]:%6.2f temperature [degC]:%6.2f\r\n",
-              data.pressure.hpa, data.heat.deg_c);
+              "%d. pressure [hPa]:%6.2f temperature [degC]:%6.2f\r\n",
+              dataPin[idev],data.pressure.hpa, data.heat.deg_c);
 
       //    }
       sleep_ms(1000);
 
-    /* Read output only if new values are available */
-    while ( (all_sources.drdy_pres | all_sources.drdy_temp) == 0){
-      ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[1]);
+    /* /\* Read output only if new values are available *\/ */
+    /* while ( (all_sources.drdy_pres | all_sources.drdy_temp) == 0){ */
+    /*   ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[2]); */
 
-      sleep_ms(1000);
-    }
+    /*   sleep_ms(1000); */
+    /* } */
       
-    //    ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[1]);
+    /* //    ilps22qs_all_sources_get(&dev_ctx, &all_sources,dataPin[1]); */
 
-    //    sleep_ms(1000);
+    /* //    sleep_ms(1000); */
 
-    //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
-      ilps22qs_data_get(&dev_ctx, &md, &data,dataPin[1]);
+    /* //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) { */
+    /*   ilps22qs_data_get(&dev_ctx, &md, &data,dataPin[2]); */
 
-      printf(
-              "2 . pressure [hPa]:%6.2f temperature [degC]:%6.2f\r\n",
-              data.pressure.hpa, data.heat.deg_c);
+    /*   printf( */
+    /*           "2 . pressure [hPa]:%6.2f temperature [degC]:%6.2f\r\n", */
+    /*           data.pressure.hpa, data.heat.deg_c); */
 
-      //    }
+    /*   //    } */
 
-      sleep_ms(1000);
+    /*   sleep_ms(1000); */
 
+    }
   }
-
 
 
   
