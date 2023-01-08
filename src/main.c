@@ -115,21 +115,21 @@ int main(){
   ilps22qs_id_t id;
 
   
-  while(1){
-    for (int i = 0; i < MAXDATALINES; i++){
-      if ( (dev_ctx0.dataPinMask & (1<<dataPin0[i]))){
-  	ilps22qs_id_get(&dev_ctx0, &id,dataPin0[i]);
-  	printf("Device 0 %d ID=%x\n",i,id.whoami);
-      }
-    }
-    for (int i = 0; i < MAXDATALINES; i++){
-      if ( (dev_ctx1.dataPinMask & (1<<dataPin1[i]))){
-  	ilps22qs_id_get(&dev_ctx1, &id,dataPin1[i]);
-  	printf("Device 1 %d ID=%x\n",i,id.whoami);
-      }
-    }
-    sleep_ms(1000);
-  }
+  /* while(1){ */
+  /*   for (int i = 0; i < MAXDATALINES; i++){ */
+  /*     if ( (dev_ctx0.dataPinMask & (1<<dataPin0[i]))){ */
+  /* 	ilps22qs_id_get(&dev_ctx0, &id,dataPin0[i]); */
+  /* 	printf("Device 0 %d ID=%x\n",i,id.whoami); */
+  /*     } */
+  /*   } */
+  /*   for (int i = 0; i < MAXDATALINES; i++){ */
+  /*     if ( (dev_ctx1.dataPinMask & (1<<dataPin1[i]))){ */
+  /* 	ilps22qs_id_get(&dev_ctx1, &id,dataPin1[i]); */
+  /* 	printf("Device 1 %d ID=%x\n",i,id.whoami); */
+  /*     } */
+  /*   } */
+  /*   sleep_ms(1000); */
+  /* } */
 			     
 
   /* Set Output Data Rate */
@@ -163,7 +163,7 @@ int main(){
 	  /*   sleep_ms(1000); */
 	  /* } */
 
-	//    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
+	  //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
 	  ilps22qs_data_get(&dev_ctx0, &md, &data,dataPin0[idev]);
 
 	  printf(
@@ -174,6 +174,29 @@ int main(){
 	  //    }
 	  sleep_ms(1000);
 	}
+
+
+	if ( (dev_ctx1.dataPinMask & (1<<dataPin1[idev]))){
+
+	  ilps22qs_all_sources_get(&dev_ctx1, &all_sources,dataPin1[idev]);	  
+	  /* while ( (all_sources.drdy_pres | all_sources.drdy_temp) == 0){ */
+	  /*   ilps22qs_all_sources_get(&dev_ctx1, &all_sources,dataPin0[idev]); */
+	  /*   sleep_ms(1000); */
+	  /* } */
+
+	  //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
+	  ilps22qs_data_get(&dev_ctx1, &md, &data,dataPin1[idev]);
+
+	  printf(
+		 //              "%d. %d pressure [hPa]:%6.2f temperature [degC]:%6.2f\r\n",
+		 "%d %d %d %6.2f %6.2f ",	     
+		 idev,all_sources.drdy_pres,all_sources.drdy_temp,data.pressure.hpa, data.heat.deg_c);
+	  
+	  //    }
+	  sleep_ms(1000);
+	}
+
+
       }
       printf("\r\n");
     }
