@@ -33,6 +33,18 @@ extern "C" {
 #include <string.h>
 #include <stdio.h>
 
+#include "pico/stdlib.h"
+#include "pico/types.h"
+#include "pico/platform.h"
+#include "hardware/gpio.h"
+#include "pico/stdlib.h"
+#include "hardware/sync.h"
+#include "hardware/adc.h"
+#include "hardware/pio.h"
+#include "hardware/clocks.h"
+
+
+  
 /** @addtogroup ILPS22QS
   * @{
   *
@@ -70,19 +82,12 @@ typedef struct
   *
   */
 
-typedef int32_t (*stmdev_write_ptr)(void *, uint8_t, const uint8_t *, uint16_t);
-  typedef int32_t (*stmdev_read_ptr)(void *, uint8_t, uint8_t *, uint16_t, uint8_t);
-typedef void (*stmdev_mdelay_ptr)(uint32_t millisec);
-
 typedef struct
 {
-  /** Component mandatory fields **/
-  stmdev_write_ptr  write_reg;
-  stmdev_read_ptr   read_reg;
-  /** Component optional fields **/
-  stmdev_mdelay_ptr   mdelay;
-  /** Customizable optional pointer **/
-  void *handle;
+  uint8_t sclkPin;
+  uint8_t csPin;
+  uint32_t dataPinMask;  
+  
 } stmdev_ctx_t;
 
 /**
@@ -332,10 +337,16 @@ int32_t ilps22qs_read_reg(stmdev_ctx_t *ctx, uint8_t reg,
 int32_t ilps22qs_write_reg(stmdev_ctx_t *ctx, uint8_t reg,
                            uint8_t *data, uint16_t len);
 
+
+int32_t ilp22qs_init(stmdev_ctx_t* dev_ctx, uint8_t sclkPin, uint8_t csPin,uint32_t dataPinMask );
+
 extern float_t ilps22qs_from_fs1260_to_hPa(int32_t lsb);
 extern float_t ilps22qs_from_fs4000_to_hPa(int32_t lsb);
 
 extern float_t ilps22qs_from_lsb_to_celsius(int16_t lsb);
+
+
+
 
 int32_t ilps22qs_reset(stmdev_ctx_t *ctx);
 
