@@ -19,7 +19,7 @@
 
 #include "ilps22qs_reg.h"
 
-#define SPIDELAY 5 //ms
+#define SPIDELAY 50 //ms
 #define    BOOT_TIME         10 //ms
 
 /**
@@ -209,7 +209,7 @@ int32_t ilp22qs_init(stmdev_ctx_t* dev_ctx, uint8_t sclkPin, uint8_t csPin,uint3
   // Clock line direct port access
   gpio_init(dev_ctx->sclkPin);
   gpio_set_slew_rate(dev_ctx->sclkPin, GPIO_SLEW_RATE_SLOW);
-  gpio_set_drive_strength(dev_ctx->sclkPin, GPIO_DRIVE_STRENGTH_2MA);
+  gpio_set_drive_strength(dev_ctx->sclkPin, GPIO_DRIVE_STRENGTH_12MA);
 
   gpio_set_dir(dev_ctx->sclkPin, GPIO_OUT);
   gpio_put(dev_ctx->sclkPin, 0);
@@ -220,9 +220,10 @@ int32_t ilp22qs_init(stmdev_ctx_t* dev_ctx, uint8_t sclkPin, uint8_t csPin,uint3
 
 
     
-  //  gpio_set_drive_strength(4, GPIO_DRIVE_STRENGTH_12MA) ;
-  /* gpio_set_drive_strength(6, GPIO_DRIVE_STRENGTH_12MA); */
-  /* gpio_set_drive_strength(7, GPIO_DRIVE_STRENGTH_12MA);   */
+  gpio_set_drive_strength(4, GPIO_DRIVE_STRENGTH_12MA) ;
+  gpio_set_drive_strength(6, GPIO_DRIVE_STRENGTH_12MA);
+  gpio_set_drive_strength(7, GPIO_DRIVE_STRENGTH_12MA);
+  gpio_set_drive_strength(8, GPIO_DRIVE_STRENGTH_12MA);
   
   // SDIO line direct port access
   //   gpio_init(sdio0Pin); 

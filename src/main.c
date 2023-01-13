@@ -87,11 +87,13 @@ int main(){
 
 
   const uint8_t dataPin0[MAXDATALINES] = {4,6,7,8,9,10};
-  const uint8_t dataPin1[MAXDATALINES] = {16,17,18,20,21,26};
+  //  const uint8_t dataPin1[MAXDATALINES] = {16,17,18,20,21,26};
+  const uint8_t dataPin1[MAXDATALINES] = {26,27,18,16,17,22};  
 
-  const uint8_t pinMask0 = 0b110011;
-  const uint8_t pinMask1 = 0b000101;  
-  
+  const uint8_t pinMask0 = 0b110110;
+  //    const uint8_t pinMask0 = 0b100010;  
+  const uint8_t pinMask1 = 0b001001;  
+  //    const uint8_t pinMask1 = 0b0;    
   //determine the masks
   uint32_t dataPinMask0 = 0;
   uint32_t dataPinMask1 = 0;  
@@ -137,7 +139,7 @@ int main(){
   md.odr = ILPS22QS_4Hz;
   md.avg = ILPS22QS_16_AVG;
   md.lpf = ILPS22QS_LPF_ODR_DIV_4;
-  md.fs = ILPS22QS_1260hPa;
+  md.fs = ILPS22QS_4060hPa;
 
 
 
@@ -156,8 +158,14 @@ int main(){
       for (int idev = 0; idev < MAXDATALINES; idev++){
 	/* Read output only if new values are available */
 	if ( (dev_ctx0.dataPinMask & (1<<dataPin0[idev]))){
+	  ilps22qs_id_get(&dev_ctx0, &id,dataPin0[idev]); 
 
-	  ilps22qs_all_sources_get(&dev_ctx0, &all_sources,dataPin0[idev]);	  
+
+	  ilps22qs_all_sources_get(&dev_ctx0, &all_sources,dataPin0[idev]);
+
+	  //	  ilp22qs_init(&dev_ctx0,2,5,dataPinMask0);	  
+	  //	  ilps22qs_mode_set(&dev_ctx0, &md);	  
+
 	  /* while ( (all_sources.drdy_pres | all_sources.drdy_temp) == 0){ */
 	  /*   ilps22qs_all_sources_get(&dev_ctx0, &all_sources,dataPin0[idev]); */
 	  /*   sleep_ms(1000); */
