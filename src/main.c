@@ -27,41 +27,18 @@
 /* Private macro -------------------------------------------------------------*/
 
 #define MAXDATALINES 6
+#define TESTING
 //#define DEBUG 
 /* Private variables ---------------------------------------------------------*/
 
 static ilps22qs_data_t data;
 
+
 /**
- * @brief main
- *
- * @return int
- */
-int main()
-{
-
-  stdio_init_all();
-  sleep_ms(1000);
-
-  ilps22qs_all_sources_t all_sources;
-  /**
-   * @brief dataPins used for SPI comms. There are two ports on the
-   * PicoBase board, for now I use them both.
-   *
-   */
-  const uint8_t dataPin0[MAXDATALINES] = {4, 6, 7, 8, 9, 10};
-  const uint8_t dataPin1[MAXDATALINES] = {26, 27, 18, 16, 17, 22};
-
-  /**
-   * @brief what sensors I want to look at. Basically a mask on the pins
-   * before
-   *
-   */
-  //  const uint8_t pinMask0 = 0b111111;
-  const uint8_t pinMask0 = 0b000000;
-  const uint8_t pinMask1 = 0b111111;
-
-  /**
+ * Reset
+*/
+void Reset(){
+/**
    * @brief determine the masks
    *
    */
@@ -119,7 +96,38 @@ int main()
 
   ilps22qs_mode_set(&dev_ctx0, &md);
   ilps22qs_mode_set(&dev_ctx1, &md);
+}
 
+/**
+ * @brief main
+ *
+ * @return int
+ */
+int main()
+{
+
+  stdio_init_all();
+  sleep_ms(1000);
+
+  ilps22qs_all_sources_t all_sources;
+  /**
+   * @brief dataPins used for SPI comms. There are two ports on the
+   * PicoBase board, for now I use them both.
+   *
+   */
+  const uint8_t dataPin0[MAXDATALINES] = {4, 6, 7, 8, 9, 10};
+  const uint8_t dataPin1[MAXDATALINES] = {26, 27, 18, 16, 17, 22};
+
+  /**
+   * @brief what sensors I want to look at. Basically a mask on the pins
+   * before
+   *
+   */
+  //  const uint8_t pinMask0 = 0b111111;
+  const uint8_t pinMask0 = 0b000000;
+  const uint8_t pinMask1 = 0b111111;
+
+  
   /**
    * @brief read samples in polling mode
    * no checks here, so data may not be ready. This has to be dealt
@@ -128,6 +136,17 @@ int main()
    */
   while (1)
   {
+    /**
+     * Process keybobard interrupt if any
+    */
+
+
+    int input = getchar_timeout_us(10);
+    if (input == 'R') {
+      printf("Resetting...\n");
+      Reset();
+    }
+
 
     for (int idev = 0; idev < MAXDATALINES; idev++)
     {
