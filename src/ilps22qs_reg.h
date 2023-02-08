@@ -1,22 +1,13 @@
-/*
-  ******************************************************************************
-  * @file    ilps22qs_reg.h
-  * @author  Sensors Software Solution Team
-  * @brief   This file contains all the functions prototypes for the
-  *          ilps22qs_reg.c driver.
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+/**
+ * @file ilps22qs_reg.h
+ * @author Vadim Rusu (vadim.l.rusu@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2023-01-14
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef ILPS22QS_REGS_H

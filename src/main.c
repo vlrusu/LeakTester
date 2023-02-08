@@ -27,7 +27,7 @@
 /* Private macro -------------------------------------------------------------*/
 
 #define MAXDATALINES 6
-#define DEBUG 0
+//#define DEBUG 
 /* Private variables ---------------------------------------------------------*/
 
 static ilps22qs_data_t data;
@@ -57,8 +57,9 @@ int main()
    * before
    *
    */
-  const uint8_t pinMask0 = 0b110110;
-  const uint8_t pinMask1 = 0b001001;
+  //  const uint8_t pinMask0 = 0b111111;
+  const uint8_t pinMask0 = 0b000000;
+  const uint8_t pinMask1 = 0b111111;
 
   /**
    * @brief determine the masks

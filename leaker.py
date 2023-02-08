@@ -1,3 +1,5 @@
+
+
 import time
 import logging
 import json
@@ -44,7 +46,7 @@ class Leaker:
         self.sensor=sensor
 
         # Logfile stuff
-        logging.basicConfig(filename='leaker.log',format='%(asctime)s %(message)s',encoding='utf-8',level=logging.DEBUG)
+        logging.basicConfig(filename='/home/mu2e/LeakTester/leaker.log',format='%(asctime)s %(message)s',encoding='utf-8',level=logging.DEBUG)
         
         # InfluxDB stuff
         token="SEPu5tOASl-Rha8SzlVQTvVfbJ2zNAewynbviYFBCVsuFxeI2EDRXkHbkgtWCio7d0E5UHcMX0cRBqwwjAtJpw=="
@@ -62,34 +64,35 @@ class Leaker:
 
 
     def logbmedata(self):
+        try:
+            if self.sensor.get_sensor_data():
+                output = "{0:.2f} {1:.2f} {2:.2f} {3:.2f}".format(self.sensor.data.temperature, self.sensor.data.pressure, self.sensor.data.humidity,self.sensor.data.gas_resistance)
+                self.bmelog.write(datetime.now().strftime("%Y:%m:%d-%H:%M:%S "))            
+                self.bmelog.write(output)
+                self.bmelog.write("\n")
+                self.bmelog.flush()
 
-        if self.sensor.get_sensor_data():
-            output = "{0:.2f} {1:.2f} {2:.2f} {3:.2f}".format(self.sensor.data.temperature, self.sensor.data.pressure, self.sensor.data.humidity,self.sensor.data.gas_resistance)
-            self.bmelog.write(datetime.now().strftime("%Y:%m:%d-%H:%M:%S "))            
-            self.bmelog.write(output)
-            self.bmelog.write("\n")
-            self.bmelog.flush()
+                point = Point("bmedata") \
+                    .tag("user", "vrusu") \
+                    .field("pressure", self.sensor.data.pressure) \
+                    .field("temp", self.sensor.data.temperature) \
+                    .field("humidity", self.sensor.data.humidity) \
+                    .field("gasresistance", self.sensor.data.gas_resistance) \
+                    .time(datetime.utcnow(), WritePrecision.NS)
 
-            point = Point("bmedata") \
-                .tag("user", "vrusu") \
-                .field("pressure", self.sensor.data.pressure) \
-                .field("temp", self.sensor.data.temperature) \
-                .field("humidity", self.sensor.data.humidity) \
-                .field("gasresistance", self.sensor.data.gas_resistance) \
-                .time(datetime.utcnow(), WritePrecision.NS)
-
-            try:
-                self.write_api.write(self.bucket, self.org, point)
-            except:
-                logging.error("influxdb failed in bmelog")
-
+                try:
+                    self.write_api.write(self.bucket, self.org, point)
+                except:
+                    logging.error("influxdb failed in bmelog")
+        except:
+            logging.error("logging bmedata failed")    
             
     def logilpdata(self):
-
+        
         try:
             line = self.ser.readline().decode('ascii')
-
-
+            
+            
             d = line.split()
             if (len(d) != SERIALDATALENGTH):
                 logging.error('data from serial not the right length')
@@ -154,7 +157,8 @@ if __name__ == '__main__':
 
     ser = serial.Serial('/dev/ttyACM0', 115200)
 
-    topdir = os.path.dirname(os.path.realpath(__file__))
+#    topdir = os.path.dirname(os.path.realpath(__file__))
+    topdir = "/home/mu2e/LeakTester/"
     # Log files
     logilp = open(os.path.join(topdir,"ilpdata.log"),"w")
     logbme = open(os.path.join(topdir,"bmedata.log"),"w")
