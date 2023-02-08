@@ -28,17 +28,36 @@
 
 #define MAXDATALINES 6
 #define TESTING
-//#define DEBUG 
+// #define DEBUG
 /* Private variables ---------------------------------------------------------*/
 
 static ilps22qs_data_t data;
+static stmdev_ctx_t dev_ctx0;
+static stmdev_ctx_t dev_ctx1;
 
+/**
+ * @brief dataPins used for SPI comms. There are two ports on the
+ * PicoBase board, for now I use them both.
+ *
+ */
+const uint8_t dataPin0[MAXDATALINES] = {4, 6, 7, 8, 9, 10};
+const uint8_t dataPin1[MAXDATALINES] = {26, 27, 18, 16, 17, 22};
+
+/**
+ * @brief what sensors I want to look at. Basically a mask on the pins
+ * before
+ *
+ */
+//  const uint8_t pinMask0 = 0b111111;
+static uint8_t pinMask0 = 0b000000;
+static uint8_t pinMask1 = 0b111111;
 
 /**
  * Reset
-*/
-void Reset(){
-/**
+ */
+void Reset()
+{
+  /**
    * @brief determine the masks
    *
    */
@@ -51,9 +70,6 @@ void Reset(){
     if (pinMask1 >> i & 0x1)
       dataPinMask1 |= (1 << dataPin1[i]);
   }
-
-  stmdev_ctx_t dev_ctx0;
-  stmdev_ctx_t dev_ctx1;
 
   ilp22qs_init(&dev_ctx0, 2, 5, dataPinMask0);
   ilp22qs_init(&dev_ctx1, 19, 21, dataPinMask1);
@@ -110,24 +126,7 @@ int main()
   sleep_ms(1000);
 
   ilps22qs_all_sources_t all_sources;
-  /**
-   * @brief dataPins used for SPI comms. There are two ports on the
-   * PicoBase board, for now I use them both.
-   *
-   */
-  const uint8_t dataPin0[MAXDATALINES] = {4, 6, 7, 8, 9, 10};
-  const uint8_t dataPin1[MAXDATALINES] = {26, 27, 18, 16, 17, 22};
 
-  /**
-   * @brief what sensors I want to look at. Basically a mask on the pins
-   * before
-   *
-   */
-  //  const uint8_t pinMask0 = 0b111111;
-  const uint8_t pinMask0 = 0b000000;
-  const uint8_t pinMask1 = 0b111111;
-
-  
   /**
    * @brief read samples in polling mode
    * no checks here, so data may not be ready. This has to be dealt
@@ -138,15 +137,32 @@ int main()
   {
     /**
      * Process keybobard interrupt if any
-    */
-
+     */
 
     int input = getchar_timeout_us(10);
-    if (input == 'R') {
+    if (input == 'R')
+    {
       printf("Resetting...\n");
+
+#ifdef TESTING
+      while (1)
+      {
+        int input == getchar();
+        if (input > 5 || input<0)
+        {
+          printf("Number needs to be between 0 and 5, you did %d\n", input);
+        }
+        else
+          break;
+      }
+      
+      pinmask1 = 0;
+      pinMask0 = (1<<input);
+
+#endif
+
       Reset();
     }
-
 
     for (int idev = 0; idev < MAXDATALINES; idev++)
     {
