@@ -188,7 +188,7 @@ int32_t ilp22qs_init(stmdev_ctx_t *dev_ctx, uint8_t sclkPin, uint8_t csPin, uint
   // CS line
   gpio_init(dev_ctx->csPin);
   gpio_set_slew_rate(dev_ctx->csPin, GPIO_SLEW_RATE_SLOW);
-  gpio_set_drive_strength(dev_ctx->csPin, GPIO_DRIVE_STRENGTH_2MA);
+  gpio_set_drive_strength(dev_ctx->csPin, GPIO_DRIVE_STRENGTH_12MA);
 
   gpio_set_dir(dev_ctx->csPin, GPIO_OUT);
   gpio_put(dev_ctx->csPin, 1);
@@ -196,7 +196,7 @@ int32_t ilp22qs_init(stmdev_ctx_t *dev_ctx, uint8_t sclkPin, uint8_t csPin, uint
   // Clock line direct port access
   gpio_init(dev_ctx->sclkPin);
   gpio_set_slew_rate(dev_ctx->sclkPin, GPIO_SLEW_RATE_SLOW);
-  gpio_set_drive_strength(dev_ctx->sclkPin, GPIO_DRIVE_STRENGTH_12MA);
+  gpio_set_drive_strength(dev_ctx->sclkPin, GPIO_DRIVE_STRENGTH_4MA);
 
   gpio_set_dir(dev_ctx->sclkPin, GPIO_OUT);
   gpio_put(dev_ctx->sclkPin, 0);

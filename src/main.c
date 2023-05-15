@@ -30,6 +30,9 @@
 //#define DEBUG 
 /* Private variables ---------------------------------------------------------*/
 
+#define P1NAME "PLANEEMPTY"
+#define P2NAME "PLANE13"
+
 static ilps22qs_data_t data;
 
 /**
@@ -58,7 +61,7 @@ int main()
    *
    */
   //  const uint8_t pinMask0 = 0b111111;
-  const uint8_t pinMask0 = 0b000000;
+  const uint8_t pinMask0 = 0b111111;
   const uint8_t pinMask1 = 0b111111;
 
   /**
@@ -129,40 +132,59 @@ int main()
   while (1)
   {
 
-    for (int idev = 0; idev < MAXDATALINES; idev++)
-    {
-      /* Read output only if new values are available */
-      if ((dev_ctx0.dataPinMask & (1 << dataPin0[idev])))
-      {
-        ilps22qs_id_get(&dev_ctx0, &id, dataPin0[idev]);
 
-        ilps22qs_all_sources_get(&dev_ctx0, &all_sources, dataPin0[idev]);
+    // Process keyboard entry, if any
 
-        //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
-        ilps22qs_data_get(&dev_ctx0, &md, &data, dataPin0[idev]);
+    int input = getchar_timeout_us(10);
+    if (input == 'R') {
+      printf("Resetting \n");
+      ilp22qs_init(&dev_ctx0, 2, 5, dataPinMask0);
+      ilp22qs_init(&dev_ctx1, 19, 21, dataPinMask1);
 
-        printf(
-            "%d %d %d %6.2f %6.2f ",
-            idev, all_sources.drdy_pres, all_sources.drdy_temp, data.pressure.hpa, data.heat.deg_c);
-
-        sleep_ms(1000);
-      }
-
-      if ((dev_ctx1.dataPinMask & (1 << dataPin1[idev])))
-      {
-
-        ilps22qs_all_sources_get(&dev_ctx1, &all_sources, dataPin1[idev]);
-
-        //    if ( all_sources.drdy_pres | all_sources.drdy_temp ) {
-        ilps22qs_data_get(&dev_ctx1, &md, &data, dataPin1[idev]);
-
-        printf(
-            "%d %d %d %6.2f %6.2f ",
-            idev, all_sources.drdy_pres, all_sources.drdy_temp, data.pressure.hpa, data.heat.deg_c);
-
-        sleep_ms(1000);
-      }
+      ilps22qs_mode_set(&dev_ctx0, &md);
+      ilps22qs_mode_set(&dev_ctx1, &md);
     }
+
+
+    printf("%s ",P1NAME);
+    for (int idev = 0; idev < MAXDATALINES; idev++)
+      {
+	/* Read output only if new values are available */
+	if ((dev_ctx0.dataPinMask & (1 << dataPin0[idev])))
+	  {
+	    ilps22qs_id_get(&dev_ctx0, &id, dataPin0[idev]);
+	    
+	    ilps22qs_all_sources_get(&dev_ctx0, &all_sources, dataPin0[idev]);
+
+	    ilps22qs_data_get(&dev_ctx0, &md, &data, dataPin0[idev]);
+	    
+	    printf(
+		   "%d %6.2f %6.2f ",
+		   idev, data.pressure.hpa, data.heat.deg_c);
+
+	    sleep_ms(1000);
+	  }
+      }
+
+    printf("%s ",P2NAME);
+    
+    for (int idev = 0; idev < MAXDATALINES; idev++)
+      {
+	if ((dev_ctx1.dataPinMask & (1 << dataPin1[idev])))
+	  {
+
+	    ilps22qs_all_sources_get(&dev_ctx1, &all_sources, dataPin1[idev]);
+	    
+	    ilps22qs_data_get(&dev_ctx1, &md, &data, dataPin1[idev]);
+	    
+	    printf(
+		   "%d %6.2f %6.2f ",
+		   idev, data.pressure.hpa, data.heat.deg_c);
+	    
+	    sleep_ms(1000);
+	  }
+      }
     printf("\r\n");
   }
 }
+

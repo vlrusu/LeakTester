@@ -6,6 +6,7 @@ import json
 import serial
 import os
 import bme680
+import serial.tools.list_ports
 
 
 from ctypes import *
@@ -21,13 +22,13 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 
 
 NCHANNELS = 6
-SERIALDATALENGTH  = 30
+SERIALDATALENGTH  = 38
 
 
 class Leaker:
-    def __init__ (self,ser,ilplog,bmelog):
+    def __init__ (self,sers,ilplog,bmelog):
 
-        self.ser = ser
+        self.sers = sers
         self.ilplog = ilplog
         self.bmelog = bmelog        
 
@@ -87,64 +88,115 @@ class Leaker:
         except:
             logging.error("logging bmedata failed")    
             
+
+ 
     def logilpdata(self):
+
+        for ser in self.sers:
         
-        try:
-            line = self.ser.readline().decode('ascii')
-            
-            
-            d = line.split()
-            if (len(d) != SERIALDATALENGTH):
-                logging.error('data from serial not the right length')
-                logging.error(len(d))
-                logging.error(line)                
-                return 0
-
-            ilplist = []
-            self.pressure = [0]*NCHANNELS
-            self.temps = [0]*NCHANNELS
-            for ich in range(NCHANNELS):
-                self.pressure[ich] = float(d[5*ich+3])
-                self.temps[ich] = float(d[5*ich+4])
-                ilplist.append(self.pressure[ich])
-                ilplist.append(self.temps[ich])
-
-            self.ilplog.write(datetime.now().strftime("%Y:%m:%d-%H:%M:%S "))            
-            self.ilplog.write(" ".join(str(e) for e in ilplist))
-            self.ilplog.write("\n")
-
-            self.ilplog.flush()
-
-
-            point = Point("ilpdata") \
-                .tag("user", "vrusu") \
-                .field("pressure-0", self.pressure[0]) \
-                .field("temp-0", self.temps[0]) \
-                .field("pressure-1", self.pressure[1]) \
-                .field("temp-1", self.temps[1]) \
-                .field("pressure-2", self.pressure[2]) \
-                .field("temp-2", self.temps[2]) \
-                .field("pressure-3", self.pressure[3]) \
-                .field("temp-3", self.temps[3]) \
-                .field("pressure-4", self.pressure[4]) \
-                .field("temp-4", self.temps[4]) \
-                .field("pressure-5", self.pressure[5]) \
-                .field("temp-5", self.temps[5]) \
-                .time(datetime.utcnow(), WritePrecision.NS)
-
-
             try:
-                self.write_api.write(self.bucket, self.org, point)
-            except:
-                logging.error("influxdb failed in ilplog")
-        except:
-            logging.error("ILP logging failed")
+                line = ser.readline().decode('ascii')
 
+
+                d = line.split()
+                if (len(d) != SERIALDATALENGTH):
+                    logging.error('data from serial not the right length')
+                    logging.error(len(d))
+                    logging.error(line)                
+                    return 0
+
+                ilplist = []
+                self.pressure = [0]*NCHANNELS
+                self.temps = [0]*NCHANNELS
+                panelid = d[0]
+                for ich in range(NCHANNELS):
+                    self.pressure[ich] = float(d[3*ich+2])
+                    self.temps[ich] = float(d[3*ich+3])
+                    ilplist.append(self.pressure[ich])
+                    ilplist.append(self.temps[ich])
+
+                self.ilplog.write(datetime.now().strftime("%Y:%m:%d-%H:%M:%S "))            
+                self.ilplog.write(panelid)
+                self.ilplog.write(" ".join(str(e) for e in ilplist))
+                self.ilplog.write("\n")
+
+                self.ilplog.flush()
+
+
+                point = Point("ilpdata"+panelid) \
+                    .tag("user", "vrusu") \
+                    .field("pressure-0", self.pressure[0]) \
+                    .field("temp-0", self.temps[0]) \
+                    .field("pressure-1", self.pressure[1]) \
+                    .field("temp-1", self.temps[1]) \
+                    .field("pressure-2", self.pressure[2]) \
+                    .field("temp-2", self.temps[2]) \
+                    .field("pressure-3", self.pressure[3]) \
+                    .field("temp-3", self.temps[3]) \
+                    .field("pressure-4", self.pressure[4]) \
+                    .field("temp-4", self.temps[4]) \
+                    .field("pressure-5", self.pressure[5]) \
+                    .field("temp-5", self.temps[5]) \
+                    .time(datetime.utcnow(), WritePrecision.NS)
+
+
+                try:
+                    self.write_api.write(self.bucket, self.org, point)
+                except:
+                    logging.error("influxdb failed in ilplog")            
+
+                ilplist = []
+                self.pressure = [0]*NCHANNELS
+                self.temps = [0]*NCHANNELS
+                panelid = d[19]
+                for ich in range(NCHANNELS):
+                    self.pressure[ich] = float(d[3*ich+21])
+                    self.temps[ich] = float(d[3*ich+22])
+                    ilplist.append(self.pressure[ich])
+                    ilplist.append(self.temps[ich])
+
+                self.ilplog.write(datetime.now().strftime("%Y:%m:%d-%H:%M:%S "))            
+                self.ilplog.write(panelid)
+                self.ilplog.write(" ".join(str(e) for e in ilplist))
+                self.ilplog.write("\n")
+
+                self.ilplog.flush()
+
+
+                point = Point("ilpdata" + panelid) \
+                    .tag("user", "vrusu") \
+                    .field("pressure-0", self.pressure[0]) \
+                    .field("temp-0", self.temps[0]) \
+                    .field("pressure-1", self.pressure[1]) \
+                    .field("temp-1", self.temps[1]) \
+                    .field("pressure-2", self.pressure[2]) \
+                    .field("temp-2", self.temps[2]) \
+                    .field("pressure-3", self.pressure[3]) \
+                    .field("temp-3", self.temps[3]) \
+                    .field("pressure-4", self.pressure[4]) \
+                    .field("temp-4", self.temps[4]) \
+                    .field("pressure-5", self.pressure[5]) \
+                    .field("temp-5", self.temps[5]) \
+                    .time(datetime.utcnow(), WritePrecision.NS)
+
+
+                try:
+                    self.write_api.write(self.bucket, self.org, point)
+                except:
+                    logging.error("influxdb failed in ilplog")
+            except:
+                logging.error("ILP logging failed logilpdata2")
+
+
+            
 
 def ilploop():
 
     while (1):
+#        leaker.logilpdata0()
+#        leaker.logilpdata1()
         leaker.logilpdata()
+#        leaker.logilpdata3()                
 def bmeloop():
 
     while (1):
@@ -155,7 +207,24 @@ def bmeloop():
 if __name__ == '__main__':
     
 
-    ser = serial.Serial('/dev/ttyACM0', 115200)
+    # Get a list of all available serial ports
+    available_ports = serial.tools.list_ports.comports()
+    sers = []
+    # Print the list of ports
+    for port in available_ports:
+        if ("ACM" in port.device):
+            ser = serial.Serial(port.device, 115200)
+            sers.append(ser)
+    print (sers)
+
+
+    # sers=[]
+    # ser = serial.Serial("/dev/ttyACM1", 115200)
+    # sers.append(ser)
+    
+    #reset
+    for ser in sers:
+        ser.write(b'R')        
 
 #    topdir = os.path.dirname(os.path.realpath(__file__))
     topdir = "/home/mu2e/LeakTester/"
@@ -166,7 +235,7 @@ if __name__ == '__main__':
 
 
 
-    leaker = Leaker(ser,logilp,logbme)
+    leaker = Leaker(sers,logilp,logbme)
 
     threads = []
     thrd1 = threading.Thread(target=ilploop, daemon = True, name="ILPLOOP")
