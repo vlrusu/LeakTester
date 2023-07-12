@@ -30,8 +30,8 @@
 //#define DEBUG 
 /* Private variables ---------------------------------------------------------*/
 
-#define P1NAME "PLANEEMPTY"
-#define P2NAME "PLANE13"
+#define P1NAME "PLANE7"
+#define P2NAME "PLANE11"
 
 static ilps22qs_data_t data;
 
@@ -52,8 +52,14 @@ int main()
    * PicoBase board, for now I use them both.
    *
    */
-  const uint8_t dataPin0[MAXDATALINES] = {4, 6, 7, 8, 9, 10};
-  const uint8_t dataPin1[MAXDATALINES] = {26, 27, 18, 16, 17, 22};
+  //  const uint8_t dataPin0[MAXDATALINES] = {4, 6, 7, 8, 9, 10};
+  const uint8_t dataPin0[MAXDATALINES] = {7,6,4,2,3,9};  
+  //  const uint8_t dataPin1[MAXDATALINES] = {26, 27, 18, 16, 17, 22};
+  const uint8_t dataPin1[MAXDATALINES] = {21,19,18,16,17,22};  
+  const uint8_t clk0 = 5;
+  const uint8_t clk1 = 20;
+  const uint8_t cs0 = 10;
+  const uint8_t cs1 = 27;  
 
   /**
    * @brief what sensors I want to look at. Basically a mask on the pins
@@ -81,8 +87,8 @@ int main()
   stmdev_ctx_t dev_ctx0;
   stmdev_ctx_t dev_ctx1;
 
-  ilp22qs_init(&dev_ctx0, 2, 5, dataPinMask0);
-  ilp22qs_init(&dev_ctx1, 19, 21, dataPinMask1);
+  ilp22qs_init(&dev_ctx0, clk0, cs0, dataPinMask0);
+  ilp22qs_init(&dev_ctx1, clk1, cs1, dataPinMask1);
 
   /* Check device ID */
   ilps22qs_id_t id;
@@ -138,8 +144,11 @@ int main()
     int input = getchar_timeout_us(10);
     if (input == 'R') {
       printf("Resetting \n");
-      ilp22qs_init(&dev_ctx0, 2, 5, dataPinMask0);
-      ilp22qs_init(&dev_ctx1, 19, 21, dataPinMask1);
+      ilp22qs_init(&dev_ctx0, clk0, cs0, dataPinMask0);
+      ilp22qs_init(&dev_ctx1, clk1, cs1, dataPinMask1);
+
+      //      ilp22qs_init(&dev_ctx0, 2, 5, dataPinMask0);
+      //      ilp22qs_init(&dev_ctx1, 19, 21, dataPinMask1);
 
       ilps22qs_mode_set(&dev_ctx0, &md);
       ilps22qs_mode_set(&dev_ctx1, &md);
