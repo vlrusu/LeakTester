@@ -27,11 +27,13 @@
 /* Private macro -------------------------------------------------------------*/
 
 #define MAXDATALINES 6
-//#define DEBUG 
+// #define DEBUG
 /* Private variables ---------------------------------------------------------*/
 
-#define P1NAME "PLANE7"
-#define P2NAME "PLANE11"
+#define P1NAME "SENSOR0"
+#define P2NAME "SENSOR1"
+
+#define SINGLESENSOR
 
 static ilps22qs_data_t data;
 
@@ -47,19 +49,33 @@ int main()
   sleep_ms(1000);
 
   ilps22qs_all_sources_t all_sources;
+
   /**
    * @brief dataPins used for SPI comms. There are two ports on the
    * PicoBase board, for now I use them both.
    *
    */
   //  const uint8_t dataPin0[MAXDATALINES] = {4, 6, 7, 8, 9, 10};
-  const uint8_t dataPin0[MAXDATALINES] = {7,6,4,2,3,9};  
+
+#ifdef SINGLESENSOR
+  const uint8_t dataPin0[MAXDATALINES] = {27, 0, 0, 0, 0, 0};
+  const uint8_t dataPin1[MAXDATALINES] = {25, 0, 0, 0, 0, 0};
+
+  const uint8_t clk0 = 18;
+  const uint8_t cs0 = 28;
+  const uint8_t clk1 = 0;
+  const uint8_t cs1 = 1;
+
+#else
+
+  const uint8_t dataPin0[MAXDATALINES] = {7, 6, 4, 2, 3, 9};
   //  const uint8_t dataPin1[MAXDATALINES] = {26, 27, 18, 16, 17, 22};
-  const uint8_t dataPin1[MAXDATALINES] = {21,19,18,16,17,22};  
+  const uint8_t dataPin1[MAXDATALINES] = {21, 19, 18, 16, 17, 22};
   const uint8_t clk0 = 5;
   const uint8_t clk1 = 20;
   const uint8_t cs0 = 10;
-  const uint8_t cs1 = 27;  
+  const uint8_t cs1 = 27;
+#endif
 
   /**
    * @brief what sensors I want to look at. Basically a mask on the pins
@@ -67,9 +83,14 @@ int main()
    *
    */
   //  const uint8_t pinMask0 = 0b111111;
+#ifdef SINGLESENSOR
+
+  const uint8_t pinMask0 = 0b1;
+  const uint8_t pinMask1 = 0b1;
+#else
   const uint8_t pinMask0 = 0b111111;
   const uint8_t pinMask1 = 0b111111;
-
+#endif
   /**
    * @brief determine the masks
    *
@@ -138,11 +159,11 @@ int main()
   while (1)
   {
 
-
     // Process keyboard entry, if any
 
     int input = getchar_timeout_us(10);
-    if (input == 'R') {
+    if (input == 'R')
+    {
       printf("Resetting \n");
       ilp22qs_init(&dev_ctx0, clk0, cs0, dataPinMask0);
       ilp22qs_init(&dev_ctx1, clk1, cs1, dataPinMask1);
@@ -154,46 +175,53 @@ int main()
       ilps22qs_mode_set(&dev_ctx1, &md);
     }
 
-
-    printf("%s ",P1NAME);
+    if (dev_ctx0.dataPinMask > 0)
+      printf("%s ", P1NAME);
     for (int idev = 0; idev < MAXDATALINES; idev++)
+    {
+      /* Read output only if new values are available */
+      if ((dev_ctx0.dataPinMask & (1 << dataPin0[idev])))
       {
-	/* Read output only if new values are available */
-	if ((dev_ctx0.dataPinMask & (1 << dataPin0[idev])))
-	  {
-	    ilps22qs_id_get(&dev_ctx0, &id, dataPin0[idev]);
-	    
-	    ilps22qs_all_sources_get(&dev_ctx0, &all_sources, dataPin0[idev]);
+        ilps22qs_id_get(&dev_ctx0, &id, dataPin0[idev]);
 
-	    ilps22qs_data_get(&dev_ctx0, &md, &data, dataPin0[idev]);
-	    
-	    printf(
-		   "%d %6.2f %6.2f ",
-		   idev, data.pressure.hpa, data.heat.deg_c);
+        ilps22qs_all_sources_get(&dev_ctx0, &all_sources, dataPin0[idev]);
 
-	    sleep_ms(1000);
-	  }
+        ilps22qs_data_get(&dev_ctx0, &md, &data, dataPin0[idev]);
+
+        printf(
+            "%d %6.2f %6.2f ",
+            idev, data.pressure.hpa, data.heat.deg_c);
+
+#ifdef SINGLESENSOR
+        sleep_ms(200);
+#else
+        sleep_ms(1000);
+#endif
       }
+    }
+    if (dev_ctx1.dataPinMask > 0)
+      printf("%s ", P2NAME);
 
-    printf("%s ",P2NAME);
-    
     for (int idev = 0; idev < MAXDATALINES; idev++)
+    {
+      if ((dev_ctx1.dataPinMask & (1 << dataPin1[idev])))
       {
-	if ((dev_ctx1.dataPinMask & (1 << dataPin1[idev])))
-	  {
 
-	    ilps22qs_all_sources_get(&dev_ctx1, &all_sources, dataPin1[idev]);
-	    
-	    ilps22qs_data_get(&dev_ctx1, &md, &data, dataPin1[idev]);
-	    
-	    printf(
-		   "%d %6.2f %6.2f ",
-		   idev, data.pressure.hpa, data.heat.deg_c);
-	    
-	    sleep_ms(1000);
-	  }
+        ilps22qs_all_sources_get(&dev_ctx1, &all_sources, dataPin1[idev]);
+
+        ilps22qs_data_get(&dev_ctx1, &md, &data, dataPin1[idev]);
+
+        printf(
+            "%d %6.2f %6.2f ",
+            idev, data.pressure.hpa, data.heat.deg_c);
+#ifdef SINGLESENSOR
+        sleep_ms(200);
+#else
+        sleep_ms(1000);
+#endif
+        
       }
+    }
     printf("\r\n");
   }
 }
-
