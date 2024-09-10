@@ -12,7 +12,10 @@
 #include "ilps22qs_reg.h"
 
 #define SPIDELAY 50  // ms
+#define I2CDELAY 100  // ms
 #define BOOT_TIME 10 // ms
+
+#define ENABLEI2C
 
 /**
  * @defgroup    ILPS22QS
@@ -45,9 +48,41 @@ int32_t ilps22qs_read_reg(stmdev_ctx_t *ctx, uint8_t reg, uint8_t *bufp,
                           uint16_t len, uint8_t w)
 {
 
+#ifdef ENABLEI2C
+
+    ilps22qs_i2c_start(ctx);
+    ilps22qs_i2c_sendbyte(ctx,0xB8); // chip address + W
+    int32_t ack = ilps22qs_i2c_ack(ctx);
+    if (ack == 1){
+        ilps22qs_i2c_stop(ctx);
+        return ack;
+    }
+
+    ilps22qs_i2c_sendbyte(ctx,reg);
+    ack = ilps22qs_i2c_ack(ctx);
+    if (ack == 1){
+       ilps22qs_i2c_stop(ctx);
+       return ack;
+    }
+    ilps22qs_i2c_stop(ctx);
+
+
+    ilps22qs_i2c_start(ctx);
+    ilps22qs_i2c_sendbyte(ctx,0xB9); // chip address + R
+    ack = ilps22qs_i2c_ack(ctx);
+    if (ack == 1){
+       ilps22qs_i2c_stop(ctx);
+       return ack;
+    }
+    ilps22qs_i2c_getbyte(ctx,bufp);
+    ilps22qs_i2c_stop(ctx);
+    return ack;
+
+#else
+  
   // Drop CS, ALL chips
   gpio_put(ctx->sclkPin, 1);
-  gpio_put(ctx->csPin, 0);
+  //  gpio_put(ctx->csPin, 0);
   //  sleep_us(1);
 
   // this is a read so set the R bit
@@ -98,6 +133,8 @@ int32_t ilps22qs_read_reg(stmdev_ctx_t *ctx, uint8_t reg, uint8_t *bufp,
   gpio_put(ctx->csPin, 1);
 
   return 0;
+
+#endif
 }
 
 /**
@@ -114,6 +151,35 @@ int32_t ilps22qs_write_reg(stmdev_ctx_t *ctx, uint8_t reg, uint8_t *bufp,
                            uint16_t len)
 {
 
+#ifdef ENABLEI2C
+      ilps22qs_i2c_start(ctx);
+      ilps22qs_i2c_sendbyte(ctx,0xB8); // chip address + W
+    int32_t ack = ilps22qs_i2c_ack(ctx);
+    if (ack == 1){
+        ilps22qs_i2c_stop(ctx);
+        return ack;
+    }
+    ilps22qs_i2c_sendbyte(ctx,reg);
+    ack = ilps22qs_i2c_ack(ctx);
+    if (ack == 1){
+       ilps22qs_i2c_stop(ctx);
+       return ack;
+    }
+//    ilps22qs_i2c_stop();
+
+
+//    ilps22qs_i2c_start();
+    ilps22qs_i2c_sendbyte(ctx,bufp);
+        ack = ilps22qs_i2c_ack(ctx);
+        if (ack == 1){
+           ilps22qs_i2c_stop(ctx);
+           return ack;
+        }
+        ilps22qs_i2c_stop(ctx);
+    return ack;
+
+#else
+  
   gpio_set_dir_out_masked(ctx->dataPinMask);
 
   //  gpio_set_dir(sdio0Pin,GPIO_OUT);
@@ -159,6 +225,8 @@ int32_t ilps22qs_write_reg(stmdev_ctx_t *ctx, uint8_t reg, uint8_t *bufp,
   gpio_put(ctx->csPin, 1);
 
   return 0;
+
+#endif
 }
 
 /**
@@ -183,6 +251,34 @@ int32_t ilp22qs_init(stmdev_ctx_t *dev_ctx, uint8_t sclkPin, uint8_t csPin, uint
   dev_ctx->csPin = csPin;
   dev_ctx->dataPinMask = dataPinMask;
 
+#ifdef ENABLEI2C
+
+    /* Initialize platform specific hardware */
+
+  // CS line
+  gpio_init(dev_ctx->csPin);
+  gpio_set_slew_rate(dev_ctx->csPin, GPIO_SLEW_RATE_SLOW);
+  gpio_set_drive_strength(dev_ctx->csPin, GPIO_DRIVE_STRENGTH_12MA);
+  gpio_set_dir(dev_ctx->csPin, GPIO_OUT);
+  gpio_put(dev_ctx->csPin, 1);
+
+  // Clock line direct port access
+  gpio_init(dev_ctx->sclkPin);
+  gpio_set_slew_rate(dev_ctx->sclkPin, GPIO_SLEW_RATE_SLOW);
+  gpio_set_drive_strength(dev_ctx->sclkPin, GPIO_DRIVE_STRENGTH_4MA);
+
+  gpio_set_dir(dev_ctx->sclkPin, GPIO_OUT);
+  gpio_put(dev_ctx->sclkPin, 0);
+
+  gpio_init_mask(dev_ctx->dataPinMask);
+  gpio_set_dir_out_masked(dev_ctx->dataPinMask);
+  uint8_t w = __builtin_ctz(dev_ctx->dataPinMask);
+  gpio_pull_up(w);
+
+  sleep_ms(BOOT_TIME);
+
+#else
+  
   /* Initialize platform specific hardware */
 
   // CS line
@@ -254,9 +350,135 @@ int32_t ilp22qs_init(stmdev_ctx_t *dev_ctx, uint8_t sclkPin, uint8_t csPin, uint
   bus_mode.filter = ILPS22QS_AUTO;
   bus_mode.interface = ILPS22QS_SPI_3W;
   ilps22qs_bus_mode_set(dev_ctx, &bus_mode);
+#endif
+  
+  return 0;
+}
+
+
+
+int32_t ilps22qs_i2c_start(stmdev_ctx_t *dev_ctx)
+  
+{
+
+  //check that only one bit is set in the maskl
+    // Check if mask is non-zero and only one bit is set
+  bool check = dev_ctx->dataPinMask != 0 && (dev_ctx->dataPinMask & (dev_ctx->dataPinMask - 1)) == 0;
+  if (check == 0) return 0;
+  
+
+  gpio_set_mask(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  gpio_set_dir_out_masked(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  gpio_put(dev_ctx->sclkPin, 1);
+  sleep_us(I2CDELAY);
+  gpio_clr_mask(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  gpio_put(dev_ctx->sclkPin, 0);
+  sleep_us(I2CDELAY);
+    
+    return 0;
+}
+
+
+
+int32_t ilps22qs_i2c_stop(stmdev_ctx_t *dev_ctx)
+{
+
+  gpio_clr_mask(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  gpio_set_dir_out_masked(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  gpio_put(dev_ctx->sclkPin, 1);
+  sleep_us(I2CDELAY);
+  gpio_set_mask(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
 
   return 0;
 }
+
+int32_t ilps22qs_i2c_ack(stmdev_ctx_t *dev_ctx)
+{
+
+  bool check = dev_ctx->dataPinMask != 0 && (dev_ctx->dataPinMask & (dev_ctx->dataPinMask - 1)) == 0;
+  if (check == 0) return 0;
+
+
+  uint8_t w = __builtin_ctz(dev_ctx->dataPinMask);
+
+  gpio_set_dir_in_masked(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  gpio_put(dev_ctx->sclkPin, 1);
+  sleep_us(I2CDELAY);
+  
+  int32_t ack = 0;
+  if (  gpio_get(w) ) ack = 1;
+
+
+  gpio_put(dev_ctx->sclkPin, 0);
+  sleep_us(I2CDELAY);
+  return ack;
+  
+}
+
+int32_t ilps22qs_i2c_sendbyte(stmdev_ctx_t *dev_ctx,uint8_t data)
+{
+
+  gpio_put(dev_ctx->sclkPin, 0);
+  sleep_us(I2CDELAY);
+  gpio_set_dir_out_masked(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  for (uint8_t m = (uint8_t)0x80; m != 0; m >>= 1){
+      gpio_put(dev_ctx->sclkPin, 0);
+      sleep_us(I2CDELAY);
+      if (data & m)
+	gpio_set_mask(dev_ctx->dataPinMask);
+      else
+	gpio_clr_mask(dev_ctx->dataPinMask);
+      sleep_us(I2CDELAY);
+      gpio_put(dev_ctx->sclkPin, 1);
+      sleep_us(I2CDELAY);
+  }
+  gpio_put(dev_ctx->sclkPin, 0);
+  sleep_us(I2CDELAY);
+  return 0;
+
+}
+
+
+int32_t ilps22qs_i2c_getbyte(stmdev_ctx_t *dev_ctx,uint8_t *data)
+{
+
+  gpio_put(dev_ctx->sclkPin, 0);
+  sleep_us(I2CDELAY);
+  gpio_set_dir_in_masked(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  data[0] = 0;
+
+  uint8_t w = __builtin_ctz(dev_ctx->dataPinMask);
+  
+  for (uint8_t j = 8; j--;)
+      {
+	gpio_put(dev_ctx->sclkPin, 0);
+	sleep_us(I2CDELAY);
+        //            bufp[i] |= (gpio_get(sdio0Pin)<<j);
+        data[0] |= (gpio_get(w) << j);
+	gpio_put(dev_ctx->sclkPin, 1);
+	sleep_us(I2CDELAY);
+      }
+
+	
+  gpio_put(dev_ctx->sclkPin, 0);
+  sleep_us(I2CDELAY);
+	
+    return 0;
+}
+
+
+
+
+
 
 /**
  * @defgroup  Private_functions

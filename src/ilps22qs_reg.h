@@ -331,6 +331,26 @@ int32_t ilps22qs_write_reg(stmdev_ctx_t *ctx, uint8_t reg,
 
 int32_t ilp22qs_init(stmdev_ctx_t* dev_ctx, uint8_t sclkPin, uint8_t csPin,uint32_t dataPinMask );
 
+
+
+  int32_t ilps22qs_i2c_start(stmdev_ctx_t *dev_ctx);
+
+
+  int32_t ilps22qs_i2c_stop(stmdev_ctx_t *dev_ctx);
+
+  int32_t ilps22qs_i2c_ack(stmdev_ctx_t *dev_ctx);
+
+  int32_t ilps22qs_i2c_sendbyte(stmdev_ctx_t *dev_ctx,uint8_t data);
+
+
+  int32_t ilps22qs_i2c_getbyte(stmdev_ctx_t *dev_ctx,uint8_t *data);
+
+
+
+
+
+
+  
 extern float_t ilps22qs_from_fs1260_to_hPa(int32_t lsb);
 extern float_t ilps22qs_from_fs4000_to_hPa(int32_t lsb);
 

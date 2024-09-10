@@ -27,13 +27,14 @@
 /* Private macro -------------------------------------------------------------*/
 
 #define MAXDATALINES 6
-// #define DEBUG
+ #define DEBUG
 /* Private variables ---------------------------------------------------------*/
 
 #define P1NAME "SENSOR0"
 #define P2NAME "SENSOR1"
 
 #define SINGLESENSOR
+
 
 static ilps22qs_data_t data;
 
@@ -58,11 +59,11 @@ int main()
   //  const uint8_t dataPin0[MAXDATALINES] = {4, 6, 7, 8, 9, 10};
 
 #ifdef SINGLESENSOR
-  const uint8_t dataPin0[MAXDATALINES] = {27, 0, 0, 0, 0, 0};
+  const uint8_t dataPin0[MAXDATALINES] = {3, 0, 0, 0, 0, 0};
   const uint8_t dataPin1[MAXDATALINES] = {25, 0, 0, 0, 0, 0};
 
-  const uint8_t clk0 = 18;
-  const uint8_t cs0 = 28;
+  const uint8_t clk0 = 5;
+  const uint8_t cs0 = 6;
   const uint8_t clk1 = 0;
   const uint8_t cs1 = 1;
 
@@ -91,6 +92,9 @@ int main()
   const uint8_t pinMask0 = 0b111111;
   const uint8_t pinMask1 = 0b111111;
 #endif
+
+
+
   /**
    * @brief determine the masks
    *
@@ -108,12 +112,13 @@ int main()
   stmdev_ctx_t dev_ctx0;
   stmdev_ctx_t dev_ctx1;
 
+
   ilp22qs_init(&dev_ctx0, clk0, cs0, dataPinMask0);
   ilp22qs_init(&dev_ctx1, clk1, cs1, dataPinMask1);
-
   /* Check device ID */
   ilps22qs_id_t id;
 
+  
 #ifdef DEBUG
   while (1)
   {
@@ -121,18 +126,19 @@ int main()
     {
       if ((dev_ctx0.dataPinMask & (1 << dataPin0[i])))
       {
-        ilps22qs_id_get(&dev_ctx0, &id, dataPin0[i]);
+	ilps22qs_id_get(&dev_ctx0, &id, dataPin0[i]);
+
         printf("Device 0 %d ID=%x\n", i, id.whoami);
       }
     }
-    for (int i = 0; i < MAXDATALINES; i++)
-    {
-      if ((dev_ctx1.dataPinMask & (1 << dataPin1[i])))
-      {
-        ilps22qs_id_get(&dev_ctx1, &id, dataPin1[i]);
-        printf("Device 1 %d ID=%x\n", i, id.whoami);
-      }
-    }
+    /* for (int i = 0; i < MAXDATALINES; i++) */
+    /* { */
+    /*   if ((dev_ctx1.dataPinMask & (1 << dataPin1[i]))) */
+    /*   { */
+    /*     ilps22qs_id_get(&dev_ctx1, &id, dataPin1[i]); */
+    /*     printf("Device 1 %d ID=%x\n", i, id.whoami); */
+    /*   } */
+    /* } */
     sleep_ms(1000);
   }
 #endif
@@ -149,6 +155,8 @@ int main()
 
   ilps22qs_mode_set(&dev_ctx0, &md);
   ilps22qs_mode_set(&dev_ctx1, &md);
+
+  adc_init();
 
   /**
    * @brief read samples in polling mode
@@ -192,36 +200,52 @@ int main()
             "%d %6.2f %6.2f ",
             idev, data.pressure.hpa, data.heat.deg_c);
 
-#ifdef SINGLESENSOR
-        sleep_ms(200);
-#else
-        sleep_ms(1000);
-#endif
       }
     }
-    if (dev_ctx1.dataPinMask > 0)
-      printf("%s ", P2NAME);
+/*     if (dev_ctx1.dataPinMask > 0) */
+/*       printf("%s ", P2NAME); */
 
-    for (int idev = 0; idev < MAXDATALINES; idev++)
-    {
-      if ((dev_ctx1.dataPinMask & (1 << dataPin1[idev])))
-      {
+/*     for (int idev = 0; idev < MAXDATALINES; idev++) */
+/*     { */
+/*       if ((dev_ctx1.dataPinMask & (1 << dataPin1[idev]))) */
+/*       { */
 
-        ilps22qs_all_sources_get(&dev_ctx1, &all_sources, dataPin1[idev]);
+/*         ilps22qs_all_sources_get(&dev_ctx1, &all_sources, dataPin1[idev]); */
 
-        ilps22qs_data_get(&dev_ctx1, &md, &data, dataPin1[idev]);
+/*         ilps22qs_data_get(&dev_ctx1, &md, &data, dataPin1[idev]); */
 
-        printf(
-            "%d %6.2f %6.2f ",
-            idev, data.pressure.hpa, data.heat.deg_c);
-#ifdef SINGLESENSOR
-        sleep_ms(200);
-#else
-        sleep_ms(1000);
-#endif
+/*         printf( */
+/*             "%d %6.2f %6.2f ", */
+/*             idev, data.pressure.hpa, data.heat.deg_c); */
+/* #ifdef SINGLESENSOR */
+/*         sleep_ms(200); */
+/* #else */
+/*         sleep_ms(1000); */
+/* #endif */
         
-      }
-    }
-    printf("\r\n");
+/*       } */
+/*     } */
+
+    adc_select_input(0);
+    const float conversion_factor = 3.3f / (1 << 12);
+
+    uint32_t result = adc_read();
+    //    printf(" 0x%03x -> %f V\n", result, result * conversion_factor);
+    printf(" %fV ", result * conversion_factor);
+
+    adc_select_input(1);
+    result = adc_read();
+    //    printf(" 0x%03x -> %f V\n", result, result * conversion_factor);
+    printf("  %fV\n", result * conversion_factor);
+
+    //    printf("\n");
+
+
+#ifdef SINGLESENSOR
+        sleep_ms(200);
+#else
+        sleep_ms(1000);
+#endif
+
   }
 }
