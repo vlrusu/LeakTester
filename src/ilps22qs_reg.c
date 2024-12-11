@@ -74,7 +74,17 @@ int32_t ilps22qs_read_reg(stmdev_ctx_t *ctx, uint8_t reg, uint8_t *bufp,
        ilps22qs_i2c_stop(ctx);
        return ack;
     }
-    ilps22qs_i2c_getbyte(ctx,bufp);
+
+    //    bufp[0] = 0;
+    //    ilps22qs_i2c_getbyte(ctx,&bufp[0]);
+    
+    for (uint8_t i = 0; i < len; i++){
+      ilps22qs_i2c_getbyte(ctx,&bufp[i]);
+      if (i < len-1)
+      	  ilps22qs_i2c_mack(ctx);
+    }
+
+
     ilps22qs_i2c_stop(ctx);
     return ack;
 
@@ -128,6 +138,7 @@ int32_t ilps22qs_read_reg(stmdev_ctx_t *ctx, uint8_t reg, uint8_t *bufp,
       gpio_put(ctx->sclkPin, 1);
       sleep_us(SPIDELAY);
     }
+    
   }
 
   gpio_put(ctx->csPin, 1);
@@ -169,13 +180,15 @@ int32_t ilps22qs_write_reg(stmdev_ctx_t *ctx, uint8_t reg, uint8_t *bufp,
 
 
 //    ilps22qs_i2c_start();
-    ilps22qs_i2c_sendbyte(ctx,bufp);
-        ack = ilps22qs_i2c_ack(ctx);
-        if (ack == 1){
-           ilps22qs_i2c_stop(ctx);
-           return ack;
-        }
-        ilps22qs_i2c_stop(ctx);
+    for (uint8_t i = 0; i < len; i++){
+      ilps22qs_i2c_sendbyte(ctx,bufp[i]);
+      ack = ilps22qs_i2c_ack(ctx);
+      if (ack == 1){
+	ilps22qs_i2c_stop(ctx);
+	return ack;
+      }
+    }
+    ilps22qs_i2c_stop(ctx);
     return ack;
 
 #else
@@ -256,11 +269,11 @@ int32_t ilp22qs_init(stmdev_ctx_t *dev_ctx, uint8_t sclkPin, uint8_t csPin, uint
     /* Initialize platform specific hardware */
 
   // CS line
-  gpio_init(dev_ctx->csPin);
-  gpio_set_slew_rate(dev_ctx->csPin, GPIO_SLEW_RATE_SLOW);
-  gpio_set_drive_strength(dev_ctx->csPin, GPIO_DRIVE_STRENGTH_12MA);
-  gpio_set_dir(dev_ctx->csPin, GPIO_OUT);
-  gpio_put(dev_ctx->csPin, 1);
+  //  gpio_init(dev_ctx->csPin);
+  //  gpio_set_slew_rate(dev_ctx->csPin, GPIO_SLEW_RATE_SLOW);
+  //  gpio_set_drive_strength(dev_ctx->csPin, GPIO_DRIVE_STRENGTH_12MA);
+  //  gpio_set_dir(dev_ctx->csPin, GPIO_OUT);
+  //  gpio_put(dev_ctx->csPin, 1);
 
   // Clock line direct port access
   gpio_init(dev_ctx->sclkPin);
@@ -422,6 +435,30 @@ int32_t ilps22qs_i2c_ack(stmdev_ctx_t *dev_ctx)
   
 }
 
+
+int32_t ilps22qs_i2c_mack(stmdev_ctx_t *dev_ctx)
+{
+
+  bool check = dev_ctx->dataPinMask != 0 && (dev_ctx->dataPinMask & (dev_ctx->dataPinMask - 1)) == 0;
+  if (check == 0) return 0;
+
+
+  uint8_t w = __builtin_ctz(dev_ctx->dataPinMask);
+
+  gpio_set_dir_out_masked(dev_ctx->dataPinMask);
+  gpio_clr_mask(dev_ctx->dataPinMask);
+  sleep_us(I2CDELAY);
+  gpio_put(dev_ctx->sclkPin, 1);
+  sleep_us(I2CDELAY);
+
+  
+
+  gpio_put(dev_ctx->sclkPin, 0);
+  sleep_us(I2CDELAY);
+  return 0;
+  
+} 
+
 int32_t ilps22qs_i2c_sendbyte(stmdev_ctx_t *dev_ctx,uint8_t data)
 {
 
@@ -454,7 +491,7 @@ int32_t ilps22qs_i2c_getbyte(stmdev_ctx_t *dev_ctx,uint8_t *data)
   sleep_us(I2CDELAY);
   gpio_set_dir_in_masked(dev_ctx->dataPinMask);
   sleep_us(I2CDELAY);
-  data[0] = 0;
+  *data = 0;
 
   uint8_t w = __builtin_ctz(dev_ctx->dataPinMask);
   
@@ -463,7 +500,7 @@ int32_t ilps22qs_i2c_getbyte(stmdev_ctx_t *dev_ctx,uint8_t *data)
 	gpio_put(dev_ctx->sclkPin, 0);
 	sleep_us(I2CDELAY);
         //            bufp[i] |= (gpio_get(sdio0Pin)<<j);
-        data[0] |= (gpio_get(w) << j);
+        *data |= (gpio_get(w) << j);
 	gpio_put(dev_ctx->sclkPin, 1);
 	sleep_us(I2CDELAY);
       }

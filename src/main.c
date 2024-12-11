@@ -27,7 +27,7 @@
 /* Private macro -------------------------------------------------------------*/
 
 #define MAXDATALINES 6
- #define DEBUG
+//#define DEBUG
 /* Private variables ---------------------------------------------------------*/
 
 #define P1NAME "SENSOR0"
@@ -62,7 +62,7 @@ int main()
   const uint8_t dataPin0[MAXDATALINES] = {3, 0, 0, 0, 0, 0};
   const uint8_t dataPin1[MAXDATALINES] = {25, 0, 0, 0, 0, 0};
 
-  const uint8_t clk0 = 5;
+  const uint8_t clk0 = 9; //was 5 here
   const uint8_t cs0 = 6;
   const uint8_t clk1 = 0;
   const uint8_t cs1 = 1;
@@ -197,8 +197,8 @@ int main()
         ilps22qs_data_get(&dev_ctx0, &md, &data, dataPin0[idev]);
 
         printf(
-            "%d %6.2f %6.2f ",
-            idev, data.pressure.hpa, data.heat.deg_c);
+            "%d %x %6.2f %6.2f ",
+            idev, id.whoami, data.pressure.hpa, data.heat.deg_c);
 
       }
     }

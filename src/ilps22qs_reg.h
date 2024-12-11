@@ -339,7 +339,8 @@ int32_t ilp22qs_init(stmdev_ctx_t* dev_ctx, uint8_t sclkPin, uint8_t csPin,uint3
   int32_t ilps22qs_i2c_stop(stmdev_ctx_t *dev_ctx);
 
   int32_t ilps22qs_i2c_ack(stmdev_ctx_t *dev_ctx);
-
+  int32_t ilps22qs_i2c_mack(stmdev_ctx_t *dev_ctx);
+  
   int32_t ilps22qs_i2c_sendbyte(stmdev_ctx_t *dev_ctx,uint8_t data);
 
 
