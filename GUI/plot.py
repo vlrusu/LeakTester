@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Initialize variables
-serial_port = "/dev/ttyACM1"  # Update your serial port
+serial_port = "/dev/ttyACM0"  # Update your serial port
 baud_rate = 115200
 is_running = False
 log_file = None
